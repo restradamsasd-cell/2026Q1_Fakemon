@@ -575,28 +575,75 @@ let state        = null;
 
 async function loadAll() {
   dlog('Loading fakemonlist.json…', 'info');
+  console.log('[DEBUG] loadAll() function started');
+  
   let list;
   try {
+    console.log('[DEBUG] Attempting to fetch: fakemon/fakemonlist.json');
     const r = await fetch('fakemon/fakemonlist.json');
+    
+    console.log('[DEBUG] Fetch response status:', r.status, r.statusText);
+    console.log('[DEBUG] Response OK?', r.ok);
+    
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    list = await r.json();
+    
+    const data = await r.json();
+    console.log('[DEBUG] Raw JSON data received:', data);
+    console.log('[DEBUG] Type of data:', typeof data);
+    console.log('[DEBUG] Is data an array?', Array.isArray(data));
+    
+    // Extract the fakemon array from the object
+    if (data.fakemon && Array.isArray(data.fakemon)) {
+      console.log('[DEBUG] Found fakemon array in data.fakemon');
+      list = data.fakemon;
+      console.log('[DEBUG] Original fakemon names:', list);
+      
+      // Add .json extension to each filename
+      list = list.map(name => {
+        const withExtension = name.endsWith('.json') ? name : `${name}.json`;
+        console.log(`[DEBUG] Mapping: "${name}" -> "${withExtension}"`);
+        return withExtension;
+      });
+      
+      console.log(`[DEBUG] Processed ${list.length} fakemon names with .json extension`);
+    } else if (Array.isArray(data)) {
+      console.log('[DEBUG] Data is directly an array');
+      list = data;
+    } else {
+      console.error('[DEBUG] Unexpected JSON structure:', data);
+      throw new Error('JSON does not contain a fakemon array');
+    }
+    
+    console.log('[DEBUG] Final list array:', list);
     dlog(`fakemonlist.json OK — ${list.length} entries found`, 'ok');
+    
   } catch(e) {
+    console.error('[DEBUG] Error:', e);
     dlog(`FAILED to load fakemonlist.json: ${e.message}`, 'error');
-    dlog('Make sure fakemonlist.json is in the same folder as this page!', 'warn');
     document.getElementById('screen-loading').textContent = '⚠ Could not load fakemonlist.json';
     return;
   }
 
+  if (!Array.isArray(list) || list.length === 0) {
+    console.error('[DEBUG] Invalid list:', list);
+    dlog('fakemonlist.json has no valid entries!', 'error');
+    document.getElementById('screen-loading').textContent = '⚠ No Fakemon found';
+    return;
+  }
+
+  console.log(`[DEBUG] Loading ${list.length} Fakemon files...`);
+  
   const results = await Promise.allSettled(
     list.map(filename => loadOneFakemon(filename))
   );
 
-  results.forEach((r, i) => {
-    if (r.status === 'fulfilled' && r.value) {
-      ALL_FAKEMON.push(r.value);
+  results.forEach((result, i) => {
+    if (result.status === 'fulfilled' && result.value) {
+      ALL_FAKEMON.push(result.value);
+      console.log(`[DEBUG] Loaded: ${result.value.name}`);
+    } else {
+      console.error(`[DEBUG] Failed: ${list[i]}`, result.reason);
     }
-    // errors already dlog'd inside loadOneFakemon
   });
 
   dlog(`Loaded ${ALL_FAKEMON.length} / ${list.length} Fakemon successfully`, ALL_FAKEMON.length > 0 ? 'ok' : 'error');
