@@ -3,7 +3,7 @@
  "name": "Sea Salt",
  "createdBy": "Jesus Taylor",
  "emoji": "🧂",
- "type": "⚡ Electric",
+ "type": "Electric",
  "hp": 300,
  "color": "#D3D3D3",
  "description": "Old man with money power.",
@@ -14,8 +14,11 @@
      "desc": "Price; Four hundred billion dollars. A slow, powerful beam that nearly garauntees a sleep status.",
      "speed": "slow",
      "damage": [100, 200],
-     "status": "flinch, sleep",
-     "statusChance": 0.90
+     "statuses": []
+     "status": "sleep",
+     "status": "flinch", 
+     "statusChance": 0.90,
+     "statusChance": 0.90]
    },
    {
      "id": "weave",
@@ -61,6 +64,6 @@
      "damage": [0, 0],
      "status": "statup",
      "statusChance": 1.0
-   },
+   }
  ]
 }
