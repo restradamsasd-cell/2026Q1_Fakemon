@@ -5,11 +5,11 @@
   "emoji": "💀",
   "type": "Metal",
 
-  "hp": 170,
-  "power": 200,
-  "speed": 100,
-  "defense": 50,
-  "accuracy": 140,
+  "hp": 700,
+  "power": 400,
+  "speed": 300,
+  "defense": 121,
+  "accuracy": 300,
 
   "description": "A short description of your Fakemon.",
 
