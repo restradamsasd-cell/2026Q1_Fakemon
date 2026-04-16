@@ -444,7 +444,7 @@ async function loadAll() {
 
     if (good.length > 0) {
       const sorted = [...good].sort((a,b) => b._power - a._power);
-      dlog(`Power ranking: ${sorted.map(e => `${shortName(e.name,3)}=${e._power}`).join(' > ')}`, 'score');
+      dlog(`Power ranking: ${sorted.map(e => `${shortName(e.name)}=${e._power}`).join(' > ')}`, 'score');
     }
     buildGallery();
   } catch (e) {
@@ -554,7 +554,7 @@ function buildGallery() {
       card.innerHTML = `
         <span class="gc-num">#${String(entry._num).padStart(3,'0')}</span>
         <span class="gc-emoji">❌</span>
-        <div class="gc-name" title="${escHtmlDebug(entry.id)}">${shortName(entry.id, 3)}</div>
+        <div class="gc-name" title="${escHtmlDebug(entry.id)}">${shortName(entry.id)}</div>
         <div class="gc-error">⚠ Load error</div>
         <div class="gc-author" style="color: #804040;">${entry.createdBy || 'Unknown author'}</div>
       `;
@@ -563,7 +563,7 @@ function buildGallery() {
       card.innerHTML = `
         <span class="gc-num">#${String(entry._num).padStart(3,'0')}</span>
         <span class="gc-emoji">${entry.emoji || '❓'}</span>
-        <div class="gc-name" title="${escHtmlDebug(entry.name)}">${shortName(entry.name, 3)}</div>
+        <div class="gc-name" title="${escHtmlDebug(entry.name)}">${shortName(entry.name)}</div>
         <span class="gc-type type-${entry.type || 'Normal'}">${entry.type || 'Normal'}</span>
         <div class="gc-power">⭐ PWR ${entry._power}</div>
         <div class="gc-author">by ${entry.createdBy || 'Unknown'}</div>

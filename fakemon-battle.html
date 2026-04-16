@@ -703,7 +703,7 @@ function escHtmlDebug(s) {
 
 // Truncate a display name to `len` chars, appending … if cut.
 // The original name is preserved in JSON data and debug logs.
-function shortName(name, len = 3) {
+function shortName(name, len = 12) {
   if (!name) return '???';
   if (name.length <= len) return name;
   return name.slice(0, len) + '\u2026';
@@ -937,7 +937,7 @@ function buildSelectScreen() {
     card.dataset.id = f.id;
     card.innerHTML = `
       <span class="choice-emoji">${f.emoji || '❓'}</span>
-      <div class="choice-name" title="${escHtmlDebug(f.name)}">${shortName(f.name, 3)}</div>
+      <div class="choice-name" title="${escHtmlDebug(f.name)}">${shortName(f.name)}</div>
       <div class="choice-type">${f.type || ''}</div>
       <div class="choice-power">⭐ PWR ${f._power}</div>
       ${f._isTest ? '<span class="test-badge">🧪 YOUR TEST</span>' : ''}
@@ -990,7 +990,7 @@ function buildOpponentGrid(player) {
     card.innerHTML = `
       ${isRec ? '<span class="recommended-badge">⭐ RECOMMENDED</span>' : ''}
       <span class="choice-emoji" style="margin-top:${isRec ? '14px' : '0'}">${f.emoji || '❓'}</span>
-      <div class="choice-name" title="${escHtmlDebug(f.name)}">${shortName(f.name, 3)}</div>
+      <div class="choice-name" title="${escHtmlDebug(f.name)}">${shortName(f.name)}</div>
       <div class="choice-type">${f.type || ''}</div>
       <div class="choice-power">PWR ${f._power} (${diffStr})</div>
       <div class="matchup-badge ${matchCls}" style="color:${matchCls === 'fair' ? 'var(--green)' : matchCls === 'uneven' ? 'var(--orange)' : 'var(--red)'}">${matchText}</div>
@@ -1522,10 +1522,10 @@ function checkDead() {
 
     document.getElementById('over-result').textContent   = won ? '🏆 YOU WIN!' : '💀 YOU LOST!';
     document.getElementById('over-result').style.color   = won ? 'var(--green)' : 'var(--red)';
-    document.getElementById('over-details').textContent  = `${shortName(player.name,3)} vs ${shortName(enemy.name,3)} — Turn ${state.turn}`;
+    document.getElementById('over-details').textContent  = `${shortName(player.name)} vs ${shortName(enemy.name)} — Turn ${state.turn}`;
     document.getElementById('over-msg').textContent      = won
-      ? `${shortName(player.name,3)} defeated ${shortName(enemy.name,3)}!`
-      : `${shortName(enemy.name,3)} knocked out ${shortName(player.name,3)}!`;
+      ? `${shortName(player.name)} defeated ${shortName(enemy.name)}!`
+      : `${shortName(enemy.name)} knocked out ${shortName(player.name)}!`;
     show('screen-over');
     return true;
   }
@@ -1545,7 +1545,7 @@ function render() {
     bar.style.width      = `${Math.max(0, pct * 100)}%`;
     bar.style.background = pct > 0.5 ? '#56c87a' : pct > 0.25 ? '#e8943a' : '#e85d5d';
     document.getElementById(`${side}-hp-text`).textContent = `${f.hp} / ${f.maxHp}`;
-    document.getElementById(`${side}-name`).textContent    = shortName(f.name, 3);
+    document.getElementById(`${side}-name`).textContent    = shortName(f.name);
     document.getElementById(`${side}-name`).title          = f.name;
     const tEl = document.getElementById(`${side}-type`);
     tEl.textContent = f.type || '';
