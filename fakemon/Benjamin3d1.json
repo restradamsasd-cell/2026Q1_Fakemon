@@ -94,7 +94,7 @@
       "speed": "medium",
       "damage": [0,0],
       "status": "sleep",
-      "statusChance": 0.5
+      "statusChance": 0.9
     },
     {
       "id": "benchy",
