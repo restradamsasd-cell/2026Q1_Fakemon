@@ -701,6 +701,14 @@ function escHtmlDebug(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// Truncate a display name to `len` chars, appending … if cut.
+// The original name is preserved in JSON data and debug logs.
+function shortName(name, len = 3) {
+  if (!name) return '???';
+  if (name.length <= len) return name;
+  return name.slice(0, len) + '\u2026';
+}
+
 function toggleDebug() {
   debugCollapsed = !debugCollapsed;
   document.getElementById('debug-body').classList.toggle('collapsed', debugCollapsed);
@@ -763,7 +771,6 @@ function getMoveStatuses(move) {
 
 function pickEnemy(player, allFakemon) {
   const candidates = allFakemon
-    .filter(f => f.id !== player.id)
     .sort((a, b) => Math.abs(a._power - player._power) - Math.abs(b._power - player._power));
   const pool = candidates.slice(0, Math.min(2, candidates.length));
   const chosen = pool[Math.floor(Math.random() * pool.length)];
@@ -930,7 +937,7 @@ function buildSelectScreen() {
     card.dataset.id = f.id;
     card.innerHTML = `
       <span class="choice-emoji">${f.emoji || '❓'}</span>
-      <div class="choice-name">${f.name}</div>
+      <div class="choice-name" title="${escHtmlDebug(f.name)}">${shortName(f.name, 3)}</div>
       <div class="choice-type">${f.type || ''}</div>
       <div class="choice-power">⭐ PWR ${f._power}</div>
       ${f._isTest ? '<span class="test-badge">🧪 YOUR TEST</span>' : ''}
@@ -967,7 +974,10 @@ function buildOpponentGrid(player) {
   const recommended = pickEnemy(player, ALL_FAKEMON);
   dlog(`Building opponent grid — recommended: ${recommended.name} (PWR ${recommended._power})`, 'info');
 
-  ALL_FAKEMON.filter(f => f.id !== player.id).forEach(f => {
+  // Mirror battles are allowed: players may fight a copy of their own fakemon.
+  // We create a deep-cloned entry with a distinct instance id so the engine
+  // treats them as separate fighters even though they share the same source data.
+  ALL_FAKEMON.forEach(f => {
     const card = document.createElement('div');
     const isRec = f.id === recommended.id;
     card.className = 'fakemon-choice' + (isRec ? ' recommended' : '');
@@ -980,7 +990,7 @@ function buildOpponentGrid(player) {
     card.innerHTML = `
       ${isRec ? '<span class="recommended-badge">⭐ RECOMMENDED</span>' : ''}
       <span class="choice-emoji" style="margin-top:${isRec ? '14px' : '0'}">${f.emoji || '❓'}</span>
-      <div class="choice-name">${f.name}</div>
+      <div class="choice-name" title="${escHtmlDebug(f.name)}">${shortName(f.name, 3)}</div>
       <div class="choice-type">${f.type || ''}</div>
       <div class="choice-power">PWR ${f._power} (${diffStr})</div>
       <div class="matchup-badge ${matchCls}" style="color:${matchCls === 'fair' ? 'var(--green)' : matchCls === 'uneven' ? 'var(--orange)' : 'var(--red)'}">${matchText}</div>
@@ -1069,15 +1079,23 @@ function startBattle(playerId, enemyId) {
   if (!pBase) { dlog(`startBattle ERROR: player id "${playerId}" not found in ALL_FAKEMON!`, 'error'); return; }
   if (!eBase) { dlog(`startBattle ERROR: enemy id "${enemyId}" not found in ALL_FAKEMON!`, 'error'); return; }
 
+  // Mirror battle: deep-clone enemy data so the two fighters are independent.
+  // Without this they would share the same object and HP changes on one
+  // would immediately affect the other.
+  const eBaseClone = (playerId === enemyId)
+    ? JSON.parse(JSON.stringify({ ...eBase, _isMirror: true }))
+    : eBase;
+  if (playerId === enemyId) dlog(`Mirror battle! ${pBase.name} vs a copy of itself.`, 'warn');
+
   dlog(`=== BATTLE START ===`, 'battle');
-  dlog(`${pBase.name} (PWR ${pBase._power}, ${pBase.type}) vs ${eBase.name} (PWR ${eBase._power}, ${eBase.type})`, 'battle');
-  dlog(`Type matchup: ${pBase.type} → ${eBase.type} = ${FakemonScorer.typeMultiplier(pBase.type, eBase.type)}x | ${eBase.type} → ${pBase.type} = ${FakemonScorer.typeMultiplier(eBase.type, pBase.type)}x`, 'battle');
+  dlog(`${pBase.name} (PWR ${pBase._power}, ${pBase.type}) vs ${eBaseClone.name} (PWR ${eBaseClone._power}, ${eBaseClone.type})${playerId===enemyId?' [MIRROR]':''}\`, 'battle');
+  dlog(`Type matchup: ${pBase.type} → ${eBaseClone.type} = ${FakemonScorer.typeMultiplier(pBase.type, eBaseClone.type)}x | ${eBaseClone.type} → ${pBase.type} = ${FakemonScorer.typeMultiplier(eBaseClone.type, pBase.type)}x`, 'battle');
   dlog(`Player moves: ${pBase.moves.map(m => `${m.name}(${m.speed || 'medium'}, ${JSON.stringify(m.damage)})`).join(' | ')}`, 'battle');
-  dlog(`Enemy moves: ${eBase.moves.map(m => `${m.name}(${m.speed || 'medium'}, ${JSON.stringify(m.damage)})`).join(' | ')}`, 'battle');
+  dlog(`Enemy moves: ${eBaseClone.moves.map(m => `${m.name}(${m.speed || 'medium'}, ${JSON.stringify(m.damage)})`).join(' | ')}`, 'battle');
 
   state = {
     player: mkFighter(pBase),
-    enemy:  mkFighter(eBase),
+    enemy:  mkFighter(eBaseClone),
     turn: 1,
     busy: false,
     over: false,
@@ -1087,8 +1105,8 @@ function startBattle(playerId, enemyId) {
 
   buildMoveGrid();
   render();
-  const { text } = matchupLabel(pBase._power, eBase._power);
-  setLog(`⚔️ ${pBase.name} (PWR ${pBase._power}) vs ${eBase.name} (PWR ${eBase._power})! ${text}`);
+  const { text } = matchupLabel(pBase._power, eBaseClone._power);
+  setLog(`⚔️ ${pBase.name} (PWR ${pBase._power}) vs ${eBaseClone.name} (PWR ${eBaseClone._power})! ${text}`);
   show('screen-battle');
 }
 
@@ -1131,6 +1149,7 @@ function buildMoveGrid() {
 
     dlog(`  Move [${idx}]: "${move.name}" speed=${move.speed || 'medium'} damage=${JSON.stringify(move.damage)} statuses=${statuses.length > 0 ? JSON.stringify(statuses) : 'none'}`, 'info');
   });
+  dlog(`Move grid: ${state.player.moves.map((m,i)=>`[${i}]${m.name}(${m.speed||'medium'})`).join(' | ')}`, 'info');
   dlog(`Move grid built with ${state.player.moves.length} buttons`, 'ok');
 }
 
@@ -1163,6 +1182,8 @@ async function doPlayerMove(move) {
 
   dlog(`--- Turn ${state.turn} ---`, 'battle');
   dlog(`Player chose: [${move.name}]  |  Enemy chose: [${enemyMove.name}]`, 'battle');
+  dlog(`  ${state.player.name}: HP=${state.player.hp}/${state.player.maxHp} ATK=${effAtk(state.player)} SPD=${effSpeed(state.player)} DEF=${effDefense(state.player)}% ACC=${effAccuracy(state.player)}% statuses=[${state.player.statuses.join(',')||'none'}]`, 'info');
+  dlog(`  ${state.enemy.name}: HP=${state.enemy.hp}/${state.enemy.maxHp} ATK=${effAtk(state.enemy)} SPD=${effSpeed(state.enemy)} DEF=${effDefense(state.enemy)}% ACC=${effAccuracy(state.enemy)}% statuses=[${state.enemy.statuses.join(',')||'none'}]`, 'info');
 
   const tierP = SPEED_ORDER[move.speed]      || 2;
   const tierE = SPEED_ORDER[enemyMove.speed] || 2;
@@ -1229,6 +1250,8 @@ async function runAction(attacker, defender, move, emojiId, wentFirst) {
 
   animatePop(emojiId);
   await delay(280);
+
+  dlog(`  [ACTION] ${attacker.name} → ${move.name} (speed:${move.speed||'medium'}, damage:${JSON.stringify(move.damage)}) targeting ${defender.name} (HP:${defender.hp}/${defender.maxHp})`, 'battle');
 
   // Accuracy check
   const accRoll = Math.random() * 100;
@@ -1336,7 +1359,8 @@ function dealDamage(attacker, defender, base, moveSpeed) {
   const defMult  = 1 - effDefense(defender) / 100;
   const raw = Math.max(1, Math.round(base * atkMult * spdMult * typeMult * defMult));
   defender.hp = Math.max(0, defender.hp - raw);
-  dlog(`  Damage calc: base=${base} × atkMult=${atkMult.toFixed(2)} × spdMult=${spdMult.toFixed(2)} × typeMult=${typeMult} × defMult=${defMult.toFixed(2)} = ${raw} (defender ${attacker.type}→${defender.type})`, 'info');
+  dlog(`  Damage calc: base=${base} × atkMult=${atkMult.toFixed(2)} × spdMult=${spdMult.toFixed(2)} × typeMult=${typeMult} × defMult=${defMult.toFixed(2)} = ${raw} (${attacker.type}→${defender.type})`, 'info');
+  dlog(`  ${defender.name} HP: ${defender.hp + raw} → ${Math.max(0, defender.hp)} (took ${raw})`, 'battle');
   let typeMsg = '';
   if (typeMult === 2)   typeMsg = ' <span class="type-super">Super effective!</span>';
   if (typeMult === 0.5) typeMsg = ' <span class="type-weak">Not very effective.</span>';
@@ -1351,10 +1375,9 @@ function applyStatus(fighter, status, statTarget) {
     dlog(`  ${fighter.name} already has "${status}" — not stacking`, 'info');
     return;
   }
-  if (PRIMARY_STATUSES.includes(status) && PRIMARY_STATUSES.some(s => fighter.statuses.includes(s))) {
-    dlog(`  ${fighter.name} already has a primary status — "${status}" blocked`, 'info');
-    return;
-  }
+  // Multi-status stacking: all statuses are allowed to stack.
+  // The only guard kept is the per-status duplicate check above.
+  // (PRIMARY_STATUSES guard removed intentionally.)
 
   fighter.statuses.push(status);
   dlog(`  ${fighter.name} now has status: ${fighter.statuses.join(', ')}`, 'ok');
@@ -1499,10 +1522,10 @@ function checkDead() {
 
     document.getElementById('over-result').textContent   = won ? '🏆 YOU WIN!' : '💀 YOU LOST!';
     document.getElementById('over-result').style.color   = won ? 'var(--green)' : 'var(--red)';
-    document.getElementById('over-details').textContent  = `${player.name} vs ${enemy.name} — Turn ${state.turn}`;
+    document.getElementById('over-details').textContent  = `${shortName(player.name,3)} vs ${shortName(enemy.name,3)} — Turn ${state.turn}`;
     document.getElementById('over-msg').textContent      = won
-      ? `${player.name} defeated ${enemy.name}!`
-      : `${enemy.name} knocked out ${player.name}!`;
+      ? `${shortName(player.name,3)} defeated ${shortName(enemy.name,3)}!`
+      : `${shortName(enemy.name,3)} knocked out ${shortName(player.name,3)}!`;
     show('screen-over');
     return true;
   }
@@ -1522,7 +1545,8 @@ function render() {
     bar.style.width      = `${Math.max(0, pct * 100)}%`;
     bar.style.background = pct > 0.5 ? '#56c87a' : pct > 0.25 ? '#e8943a' : '#e85d5d';
     document.getElementById(`${side}-hp-text`).textContent = `${f.hp} / ${f.maxHp}`;
-    document.getElementById(`${side}-name`).textContent    = f.name;
+    document.getElementById(`${side}-name`).textContent    = shortName(f.name, 3);
+    document.getElementById(`${side}-name`).title          = f.name;
     const tEl = document.getElementById(`${side}-type`);
     tEl.textContent = f.type || '';
     tEl.className   = `fighter-type type-${f.type || 'Normal'}`;
