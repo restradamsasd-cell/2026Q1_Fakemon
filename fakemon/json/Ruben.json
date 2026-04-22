@@ -1,0 +1,63 @@
+{
+  "id": "rubenestrada_1",
+  "name": "Chicken",
+  "createdBy": "RUBEN ESTRADA",
+  "emoji": "🐔",
+  "type": "Fire",
+  "hp": 200,
+  "atk": 106,
+  "speed": 100,
+  "defense": 10,
+  "accuracy": 90,
+  "color": "#FFFFFF",
+  "description": "to tuff",
+  "moves": [
+    {
+      "id": "rubenestrada_m1",
+      "name": "domain expansion  feather slashes",
+      "speed": "fast",
+      "damage": [
+        15,
+        15
+      ],
+      "status": "paralyze",
+      "statusChance": 0.7,
+      "desc": "feathers slashing you everywehere"
+    },
+    {
+      "id": "rubenestrada_m2",
+      "name": "peck",
+      "speed": "slow",
+      "damage": [
+        26,
+        28
+      ],
+      "status": "burn",
+      "statusChance": 0.5
+    },
+    {
+      "id": "rubenestrada_m3",
+      "name": "regenerate",
+      "speed": "fast",
+      "damage": [
+        0,
+        0
+      ],
+      "status": "statup",
+      "statusChance": 1,
+      "desc": "heals you",
+      "statTarget": "defense"
+    },
+    {
+      "id": "rubenestrada_m4",
+      "name": "burning hell",
+      "speed": "fast",
+      "damage": [
+        20,
+        20
+      ],
+      "status": "burn",
+      "statusChance": 1
+    }
+  ]
+}
